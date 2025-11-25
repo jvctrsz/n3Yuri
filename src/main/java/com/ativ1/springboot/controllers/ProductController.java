@@ -1,9 +1,15 @@
 package com.ativ1.springboot.controllers;
 
+import com.ativ1.springboot.domain.Customer;
 import com.ativ1.springboot.domain.Product;
 import com.ativ1.springboot.repository.ProductRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
+import java.util.Map;
 
 
 //ENDPOINTS DE PRODUTOS
@@ -16,10 +22,10 @@ public class ProductController {
         this.repository = repository;
     }
 
-
     @PostMapping
-    public Product create(@RequestBody Product product) {
-        return repository.save(product);
+    public ResponseEntity<Product> create(@RequestBody Product product) {
+        var productCreated =  repository.save(product);
+    return  ResponseEntity.status(201).body(productCreated);
     }
 
 
@@ -30,8 +36,10 @@ public class ProductController {
 
 
     @GetMapping("/{id}")
-    public Product ListByID(@PathVariable Long id) {
-        return repository.findById(id).orElse(null);
+    public ResponseEntity<?> ListByID(@PathVariable Long id) {
+        var product =  repository.findById(id);
+        if(product.isPresent()) return ResponseEntity.ok(product.get());
+        return ResponseEntity.status(404).body(Map.of("error", "Produto não encontrado."));
     }
 
 
@@ -42,12 +50,19 @@ public class ProductController {
             product.setPrice(newProduct.getPrice());
             product.setQuantity(newProduct.getQuantity());
             return repository.save(product);
-        }).orElse(null);
+        }).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
 
     @DeleteMapping("/{id}")
-    public void Delete(@PathVariable Long id) {
-        repository.deleteById(id);
-    }
+    public  ResponseEntity<?> Delete(@PathVariable Long id) {
+        var product = repository.findById(id);
+        if (product.isPresent()) {
+            repository.deleteById(id);
+            return ResponseEntity.status(200)
+                    .body(Map.of("message", "Produto deletado com sucesso."));
+        }
+        return ResponseEntity
+                .status(404)
+                .body(Map.of("error", "Produto não encontrado."));}
 }
